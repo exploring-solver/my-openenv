@@ -267,29 +267,14 @@ def _action_summary(action: Dict[str, Any]) -> str:
 def main() -> None:
     client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
 
-    results = []
     for task_info in TASKS:
         task_id = task_info["task_id"]
         task_name = task_info["name"]
         num_tickets = task_info["tickets"]
 
         for ticket_idx in range(num_tickets):
-            result = run_episode(client, task_id, task_name, ticket_idx)
-            results.append(result)
+            run_episode(client, task_id, task_name, ticket_idx)
             time.sleep(0.5)  # rate-limit courtesy
-
-    # Summary
-    print("\n" + "=" * 60, flush=True)
-    print("BASELINE RESULTS SUMMARY", flush=True)
-    print("=" * 60, flush=True)
-    for r in results:
-        status = "PASS" if r["success"] else "FAIL"
-        total_r = sum(r["rewards"])
-        print(
-            f"  {r['task_id']} ticket={r['ticket_index']}  "
-            f"steps={r['steps']}  reward={total_r:.2f}  {status}",
-            flush=True,
-        )
 
 
 if __name__ == "__main__":

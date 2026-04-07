@@ -35,6 +35,26 @@ Extract structured entities (IDs, names, amounts, dates) and identify the list o
 **Task 3 — Resolution Generation (Hard)**  
 Write a professional customer-facing response and an ordered list of internal resolution steps. Graded on keyword coverage, step completeness, tone adherence, and minimum length.
 
+## Observation Space
+
+Each observation includes:
+
+- `task_id`, `task_description`, `episode_id`
+- `ticket` object with `ticket_id`, `subject`, `body`, `customer_tier`, `account_age_days`, `previous_tickets`, `attachments`
+- `thread_history` as ordered action summaries
+- `available_actions` for the current task state
+- `step_number`, `max_steps`
+- `hint` (optional guidance)
+
+## Action Space
+
+Supported `action.action_type` values:
+
+- `classify`: requires `category` and `priority`
+- `extract`: requires `extracted_entities` and `required_actions`
+- `respond`: requires `response_text` and `resolution_steps`
+- `submit`: closes the episode and triggers terminal grading
+
 ## API
 
 | Method | Endpoint | Description |
@@ -112,10 +132,28 @@ uvicorn app:app --host 0.0.0.0 --port 7860
 ## Running the Baseline Agent
 
 ```bash
+export API_BASE_URL=https://router.huggingface.co/v1
 export HF_TOKEN=your_token_here
 export MODEL_NAME=Qwen/Qwen2.5-72B-Instruct
 python inference.py
 ```
+
+Required environment variables for baseline LLM calls:
+
+- `API_BASE_URL` (default provided in code)
+- `MODEL_NAME` (default provided in code)
+- `HF_TOKEN` (must be provided)
+
+Environment endpoint variables for the baseline:
+
+- `OPENENV_BASE_URL` (preferred, default `http://localhost:7860`)
+- `API_BASE_URL_ENV` (backward-compatible alias)
+
+The baseline emits strict structured stdout lines only:
+
+- `[START] task=<...> env=<...> model=<...>`
+- `[STEP] step=<...> action=<...> reward=<...> done=<...> error=<...>`
+- `[END] success=<...> steps=<...> rewards=<...>`
 
 ## Docker
 
