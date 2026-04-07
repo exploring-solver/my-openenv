@@ -8,7 +8,8 @@ Environment variables:
   API_BASE_URL   LLM endpoint            (default: https://router.huggingface.co/v1)
   MODEL_NAME     Model identifier         (default: Qwen/Qwen2.5-72B-Instruct)
   HF_TOKEN       API key
-  API_BASE_URL_ENV  SupportEnv server URL (default: http://localhost:7860)
+    OPENENV_BASE_URL  SupportEnv server URL (preferred)
+    API_BASE_URL_ENV  SupportEnv server URL (backward compatible alias)
 """
 import json
 import os
@@ -26,7 +27,11 @@ from openai import OpenAI
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 HF_TOKEN = os.getenv("HF_TOKEN") or os.getenv("API_KEY", "")
-ENV_BASE_URL = os.getenv("API_BASE_URL_ENV", "http://localhost:7860")
+ENV_BASE_URL = (
+    os.getenv("OPENENV_BASE_URL")
+    or os.getenv("API_BASE_URL_ENV")
+    or "http://localhost:7860"
+)
 
 TEMPERATURE = 0.3
 MAX_TOKENS = 1024
