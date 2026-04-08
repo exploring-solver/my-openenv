@@ -2,7 +2,7 @@
 Deterministic graders for SupportEnv tasks.
 
 Each grader inspects the agent's action_history against ground-truth data
-and returns (score, breakdown, feedback) where score is in [0.0, 1.0].
+and returns (score, breakdown, feedback) where score is in (0.0, 1.0).
 
 Task 1 — Classification:  category match (0.50) + priority match (0.40) + efficiency (0.10)
 Task 2 — Extraction:      entity coverage (0.60) + action coverage (0.30) + no hallucination (0.10)
@@ -14,6 +14,14 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
 
 
+SCORE_EPSILON = 0.0001
+
+
+def _strict_score(score: float) -> float:
+    """Map any score into the strict open interval (0, 1)."""
+    return round(min(max(score, SCORE_EPSILON), 1.0 - SCORE_EPSILON), 4)
+
+
 def grade_task(
     task_id: str, episode_state: Dict[str, Any]
 ) -> Tuple[float, Dict[str, float], str]:
@@ -23,7 +31,7 @@ def grade_task(
         return _grade_extraction(episode_state)
     elif task_id == "task3":
         return _grade_resolution(episode_state)
-    return 0.0, {}, "Unknown task"
+    return _strict_score(0.0), {}, "Unknown task"
 
 
 # ---------------------------------------------------------------------------
@@ -66,7 +74,7 @@ def _grade_classification(ep: Dict[str, Any]) -> Tuple[float, Dict[str, float], 
 
     classify_action = _last_action_of_type(history, "classify")
     if classify_action is None:
-        return 0.0, breakdown, "No classify action found."
+        return _strict_score(0.0), breakdown, "No classify action found."
 
     # Category
     if _normalize(classify_action.get("category")) == _normalize(gt["category"]):
@@ -84,7 +92,7 @@ def _grade_classification(ep: Dict[str, Any]) -> Tuple[float, Dict[str, float], 
     else:
         breakdown["efficiency"] = round(max(0.0, 0.10 * (1 - (steps_used - 1) / max_steps)), 4)
 
-    score = round(min(sum(breakdown.values()), 1.0), 4)
+    score = _strict_score(sum(breakdown.values()))
     parts = ", ".join(f"{k}={v:.2f}" for k, v in breakdown.items())
     return score, breakdown, f"Task 1: {parts}"
 
@@ -112,7 +120,7 @@ def _grade_extraction(ep: Dict[str, Any]) -> Tuple[float, Dict[str, float], str]
     extract_action = _last_action_of_type(history, "extract")
     if extract_action is None:
         breakdown["no_hallucination"] = 0.0
-        return 0.0, breakdown, "No extract action found."
+        return _strict_score(0.0), breakdown, "No extract action found."
 
     # --- Entity coverage ---
     gt_entities: Dict[str, Any] = gt.get("entities", {})
@@ -144,7 +152,7 @@ def _grade_extraction(ep: Dict[str, Any]) -> Tuple[float, Dict[str, float], str]
             penalty = min(len(extra_keys) * 0.02, 0.10)
             breakdown["no_hallucination"] = round(max(0.0, 0.10 - penalty), 4)
 
-    score = round(min(sum(breakdown.values()), 1.0), 4)
+    score = _strict_score(sum(breakdown.values()))
     parts = ", ".join(f"{k}={v:.2f}" for k, v in breakdown.items())
     return score, breakdown, f"Task 2: {parts}"
 
@@ -185,7 +193,7 @@ def _grade_resolution(ep: Dict[str, Any]) -> Tuple[float, Dict[str, float], str]
     respond_action = _last_action_of_type(history, "respond")
     if respond_action is None:
         breakdown["no_empty_steps"] = 0.0
-        return 0.0, breakdown, "No respond action found."
+        return _strict_score(0.0), breakdown, "No respond action found."
 
     response_text: str = respond_action.get("response_text") or ""
     resolution_steps: List[str] = respond_action.get("resolution_steps") or []
@@ -239,6 +247,6 @@ def _grade_resolution(ep: Dict[str, Any]) -> Tuple[float, Dict[str, float], str]
     if not resolution_steps or any(not s.strip() for s in resolution_steps):
         breakdown["no_empty_steps"] = 0.0
 
-    score = round(min(sum(breakdown.values()), 1.0), 4)
+    score = _strict_score(sum(breakdown.values()))
     parts = ", ".join(f"{k}={v:.2f}" for k, v in breakdown.items())
     return score, breakdown, f"Task 3: {parts}"
