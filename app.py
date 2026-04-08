@@ -16,7 +16,7 @@ import os
 from datetime import datetime
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -107,7 +107,7 @@ def tasks():
 
 
 @app.post("/reset", tags=["control"])
-def reset(req: ResetRequest):
+def reset(req: ResetRequest = Body(default_factory=ResetRequest)):
     try:
         obs = env.reset(req.task_id, ticket_index=req.ticket_index or 0)
         return obs.model_dump()
